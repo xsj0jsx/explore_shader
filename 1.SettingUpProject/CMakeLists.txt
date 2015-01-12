@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 2.6)
+project(simple_glut)
+set(CMAKE_BUILD_TYPE Debug)
+set(cpp_flags -std=c++0x  )
+add_definitions(${cpp_flags})
+
+set(glsdk_root /home/xsj/opengl_project/glsdk_0_5_2)
+link_directories(${glsdk_root}/freeglut/lib ${glsdk_root}/glload/lib)
+include_directories(${glsdk_root}/freeglut/include ${glsdk_root}/glload/include)
+add_executable(main simple_glut.cpp)
+target_link_libraries(main  glloadD freeglutD GL GLU X11 Xrandr pthread)
