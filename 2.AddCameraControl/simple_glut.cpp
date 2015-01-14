@@ -7,11 +7,24 @@
 #include <glload/gl_3_3.h>
 #include <glload/gl_load.hpp>
 #include <GL/freeglut.h>
-
+#include <glutil/MatrixStack.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glutil/MousePoles.h>
 GLuint positionBufferObject;
 GLuint program;
 GLuint vao;
-
+glm::vec2 camera_rotation;
+glm::mat4 WorldViewMatrix;
+bool leftButton_pressing = false;
+//the camera is at lookat (0,0,0) with radius 200 in world space
+const glm::vec3 targetPos(0.0f,0.0f,0.0f);
+const glm::fquat orient = glm::angleAxis(float(glm::radians(90)), glm::vec3(0.0f,1.0f,0.0f));
+const float init_radius = 200.0f;
+//minRadius, maxRadius, largeRadiusDelta, smallRadiusDelta, largePosOffset, smallPosOffset, rotationScale(degree)
+glutil::ViewScale controlData_camera{1, 1000, 10, 1, 10, 1, 1};
+glutil::ViewPole camera{glutil::ViewData{targetPos, orient, init_radius, 0}, controlData_camera};
 GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 {
 	GLuint shader = glCreateShader(eShaderType);
@@ -25,7 +38,7 @@ GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 	if (status == GL_FALSE)
 	{
 		//With ARB_debug_output, we already get the info log on compile failure.
-		if(!glext_ARB_debug_output)
+		//if(!glext_ARB_debug_output)
 		{
 			GLint infoLogLength;
 			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
@@ -41,7 +54,7 @@ GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 			case GL_FRAGMENT_SHADER: strShaderType = "fragment"; break;
 			}
 
-			fprintf(stderr, "Compile failure in %s shader:\n%s\n", strShaderType, strInfoLog);
+			printf("Compile failure in %s shader:\n%s\n", strShaderType, strInfoLog);
 			delete[] strInfoLog;
 		}
 
@@ -58,22 +71,22 @@ void init()
 	glBindVertexArray(vao);
 
 	const float vertexPositions[] = {
-		0.75f, 0.75f, 0.0f, 1.0f,
-		0.75f, -0.75f, 0.0f, 1.0f,
-		-0.75f, -0.75f, 0.0f, 1.0f,
+		0.75f, 0.75f, 0.0f,
+		0.75f, -0.75f, 0.0f,
+		-0.75f, -0.75f, 0.0f
 	};
 
 	glGenBuffers(1, &positionBufferObject);
 	glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
+	
 	const std::string vertexShader(
-		"#version 330\n"
-		"layout(location = 0) in vec4 position;\n"
+		"#version 330 compatibility\n"
+		"layout(location = 0) in vec3 position;\n"
+		"uniform mat4 uModelViewProjectionMatrix;\n"
 		"void main()\n"
 		"{\n"
-		"   gl_Position = position;\n"
+		"   gl_Position = uModelViewProjectionMatrix * vec4(position, 1);\n"
 		"}\n"
 		);
 
@@ -82,7 +95,7 @@ void init()
 		"out vec4 outputColor;\n"
 		"void main()\n"
 		"{\n"
-		"   outputColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+		"   outputColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);\n"
 		"}\n"
 		);
 
@@ -123,16 +136,19 @@ void display()
 
 	glUseProgram(program);
 
-	glBindBuffer(GL_ARRAY_BUFFER, positionBufferObject);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glm::mat4 world2camera = camera.CalcMatrix();
+	
+	float aspectRadio = float(glutGet(GLUT_WINDOW_WIDTH)) / glutGet(GLUT_WINDOW_HEIGHT);
+	glm::mat4 projection = glm::perspective(float(glm::radians(45.0)), aspectRadio, 0.1f, 1000.0f);
+	glm::mat4 modelViewProjection = projection * world2camera;
+	auto loc_modelViewProjection = glGetUniformLocation(program, "uModelViewProjectionMatrix");
+	glUniformMatrix4fv(loc_modelViewProjection, 1, GL_FALSE, glm::value_ptr(modelViewProjection) );
 	glDrawArrays(GL_TRIANGLES, 0, 3);
-
-	glDisableVertexAttribArray(0);
-	glUseProgram(0);
-
+	
 	glutSwapBuffers();
+	glutPostRedisplay();
 }
 
 //Called whenever the window is resized. The new window size is given, in pixels.
@@ -148,12 +164,38 @@ void reshape (int w, int h)
 //exit the program.
 void keyboard(unsigned char key, int x, int y)
 {
+	printf("%c\n", key);
+	//camera.CharPress(key);
 	switch (key)
 	{
 	case 27:
 		glutLeaveMainLoop();
 		break;
 	}
+}
+void mouse(int button, int state, int x,int y)
+{
+	glutil::MouseButtons theButton = glutil::MB_LEFT_BTN;
+	//printf("button %d %s\n", button, state == GLUT_UP?"Up":"Down");
+	if(button == 3 || button == 4){
+		if(state == GLUT_UP) return;
+		camera.MouseWheel(button == 3?1:-1, 0, glm::ivec2(x,y));
+	}
+	else{
+		switch(button){
+		case GLUT_LEFT_BUTTON:theButton = glutil::MB_LEFT_BTN;break;
+		case GLUT_MIDDLE_BUTTON:theButton = glutil::MB_MIDDLE_BTN;break;
+		case GLUT_RIGHT_BUTTON:theButton = glutil::MB_RIGHT_BTN;break;
+		default:return;break;
+		}
+		camera.MouseClick(theButton, state == GLUT_DOWN, 0, glm::ivec2(x,y));
+	}
+	
+}
+void motion(int x, int y)
+{
+	//printf("motion %d,%d\n",x,y);
+	camera.MouseMove(glm::ivec2(x,y));
 }
 
 void APIENTRY DebugFunc(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
@@ -204,9 +246,7 @@ int main(int argc, char** argv)
 	glutInitDisplayMode(displayMode);
 	glutInitContextVersion (3, 3);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
-#ifdef DEBUG
 	glutInitContextFlags(GLUT_DEBUG);
-#endif
 	glutInitWindowSize (width, height); 
 	glutInitWindowPosition (300, 200);
 	glutCreateWindow (argv[0]);
@@ -215,17 +255,16 @@ int main(int argc, char** argv)
 
 	glload::LoadFunctions();
 	printf("opengl version %d.%d\n", glload::GetMajorVersion(), glload::GetMinorVersion());
-	if(glext_ARB_debug_output)
-	{
-		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-		glDebugMessageCallbackARB(DebugFunc, (void*)15);
-	}
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+	glDebugMessageCallbackARB(DebugFunc, (void*)15);
 
 	init();
 
 	glutDisplayFunc(display); 
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
+	glutMouseFunc(mouse);
+	glutMotionFunc(motion);
 	glutMainLoop();
 	return 0;
 }
