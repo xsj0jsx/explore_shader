@@ -15,9 +15,6 @@
 GLuint positionBufferObject;
 GLuint program;
 GLuint vao;
-glm::vec2 camera_rotation;
-glm::mat4 WorldViewMatrix;
-bool leftButton_pressing = false;
 //the camera is at lookat (0,0,0) with radius 200 in world space
 const glm::vec3 targetPos(0.0f,0.0f,0.0f);
 const glm::fquat orient = glm::angleAxis(float(glm::radians(90)), glm::vec3(0.0f,1.0f,0.0f));
