@@ -50,6 +50,7 @@ GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 std::string file2string(const std::string& fname)
 {
 	using std::ifstream;
+	std::cout << "file2string with:" << fname << std::endl;
 	ifstream file(fname.c_str());
 	assert(file);
 	file.seekg(0, file.end);
@@ -61,8 +62,8 @@ std::string file2string(const std::string& fname)
 }
 GLuint buildProgrameFromFile(const std::string& vertex_shader, const std::string& fragment_shader)
 {
-	auto handle_vert = BuildShader(GL_VERTEX_SHADER, file2string(vertex_shader) );
-	auto handle_frag = BuildShader(GL_FRAGMENT_SHADER, file2string(fragment_shader) );
+	auto handle_vert = BuildShader(GL_VERTEX_SHADER, file2string(SHADER_ROOT+vertex_shader) );
+	auto handle_frag = BuildShader(GL_FRAGMENT_SHADER, file2string(SHADER_ROOT+fragment_shader) );
 	GLuint program = glCreateProgram();
 	glAttachShader(program, handle_vert);
 	glAttachShader(program, handle_frag);
@@ -95,13 +96,15 @@ std::vector<T> string2vector(const std::string& str)
 // and f only support 3 point and only vert index
 void simpleReadObjFile(const std::string& fname, std::vector<float> &vert, std::vector<int> &index)
 {
-	std::ifstream file(fname.c_str());
+	std::string fullName = DATA_ROOT + fname;
+	std::cout << "read obj file:" << fullName << std::endl;
+	std::ifstream file(fullName.c_str());
 	assert(file);
 	std::string line;
 	while(std::getline(file, line)){
 		if(line.empty()) continue;
 		const char hint = line[0];
-		if(hint == 'v'){
+		if(hint == 'v' && line[1] != 'n'){
 			auto v3 = string2vector<float>(line.substr(1));
 			assert(v3.size() == 3);
 			vert.insert(vert.end(), v3.begin(), v3.end());

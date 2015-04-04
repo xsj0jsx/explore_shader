@@ -57,6 +57,7 @@ GLuint BuildShader(GLenum eShaderType, const std::string &shaderText)
 std::string file2string(const std::string& fname)
 {
 	using std::ifstream;
+    std::cout << "file:" << fname << " tostring\n";
 	ifstream file(fname.c_str());
 	assert(file);
 	file.seekg(0, file.end);
@@ -70,7 +71,7 @@ GLuint buildProgrameFromFile(const std::map<GLuint, std::string> &type_fname)
 {
 	GLuint program = glCreateProgram();
 	for(const auto& shader : type_fname){
-		auto handle = BuildShader(shader.first, file2string(SHADER_ROOT+shader.second));
+		auto handle = BuildShader(shader.first, file2string(SHADER_ROOT + shader.second));
 		glAttachShader(program, handle);
 	}
 	glLinkProgram(program);
@@ -107,9 +108,9 @@ std::ostream& operator<<(std::ostream& stream, const glm::vec3& v){
 void simpleReadObjFile(const std::string& fname, std::vector<float> &vert,
 					   std::vector<float>& normal, std::vector<int> &index)
 {
-	std::string fullName = DATA_ROOT + fname;
-	std::cout << "read vert:" << fullName << std::endl;
-	std::ifstream file(fullName.c_str());
+	std::string fullname = DATA_ROOT + fname;
+	std::cout << "read vert:" << fullname << std::endl;
+	std::ifstream file(fullname.c_str());
 	assert(file);
 	std::string line;
 	glm::vec3 maxVert{FLT_MIN,FLT_MIN,FLT_MIN},minVert{FLT_MAX,FLT_MAX,FLT_MAX};

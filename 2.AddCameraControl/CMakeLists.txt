@@ -3,7 +3,6 @@ project(addCameraControl)
 set(CMAKE_BUILD_TYPE Debug)
 set(cpp_flags -std=c++0x  )
 add_definitions(${cpp_flags})
-
 set(glsdk_root /home/xsj/opengl_project/glsdk_0_5_2)
 link_directories(${glsdk_root}/freeglut/lib ${glsdk_root}/glload/lib ${glsdk_root}/glutil/lib)
 include_directories(${glsdk_root}/freeglut/include ${glsdk_root}/glload/include
