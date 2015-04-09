@@ -23,7 +23,8 @@ GLuint buildProgrameFromFile(const  ShaderType_Fname &type_fname);
 void simpleReadObjFile(const std::string& fname, std::vector<float> &vert,
 					   std::vector<float> &normal, std::vector<int> &index);
 
-GLuint programe_pointADSLight, programe_spotADSLight, programe_flatShadeLight, programe_phongPoint;
+GLuint programe_pointADSLight, programe_spotADSLight, programe_flatShadeLight, programe_phongPoint,
+	programe_halfAnglePhong;
 GLuint programe_current;
 
 GLuint vao;
@@ -72,6 +73,9 @@ void init()
 	ShaderType_Fname phongPoint_shaders = { {GL_VERTEX_SHADER, "phong_vertex.shader"}
 											,{GL_FRAGMENT_SHADER, "phong_fragment.shader"} };
 	programe_phongPoint = buildProgrameFromFile(phongPoint_shaders);
+	ShaderType_Fname halfAngle_shaders = { {GL_VERTEX_SHADER, "phong_vertex.shader"}
+										   ,{GL_FRAGMENT_SHADER, "halfAngle_fragment.shader"}};
+	programe_halfAnglePhong = buildProgrameFromFile(halfAngle_shaders);
 	//
 	ShaderType_Fname adsLight_shaders = {{GL_VERTEX_SHADER, "ads_vertex.shader"}
 										  ,{GL_FRAGMENT_SHADER, "fragment.shader"}};
@@ -137,6 +141,9 @@ void keyboard(unsigned char key, int x, int y)
 		break;
 	case '4':
 		programe_current = programe_phongPoint;
+		break;
+	case '5':
+		programe_current = programe_halfAnglePhong;
 		break;
 	case 27:
 		glutLeaveMainLoop();
